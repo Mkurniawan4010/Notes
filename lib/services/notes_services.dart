@@ -1,36 +1,39 @@
+
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
+
 
 class NoteServices {
-  final CollectionReference _database =
-      FirebaseFirestore.instance.collection('note_list');
+  static final FirebaseFirestore _database = FirebaseFirestore.instance;
+  static final CollectionReference _noteCollection =
+      _database.collection('notes');
 
-  Stream<Map<String, String>> getNoteList() {
-    return _database.snapshots().map((querySnapshot) {
-      final Map<String, String> items = {};
-
-      querySnapshot.docs.map((docSnapshot) {
-        final data = docSnapshot.data() as Map<String, String>;
-        if (data.containsKey('title')) {
-          Map<dynamic, dynamic> values = data as Map<dynamic, dynamic>;
-          values.forEach((key, value) {
-            items[key] = value['title'] as String;
-          });
-        }
-      });
-
-      return items;
-    });
-  }
-
-  void addNotesList(String title, String description) {
-    _database.doc().set({
+  static Future<void> addNote(String title, String description) async {
+    Map<String, dynamic> newNote = {
       'title': title,
       'description': description,
-    });
+    };
+    await _noteCollection.add(newNote);
   }
 
-  Future<void> removeNoteList(String key) async {
-    await _database.doc(key).delete();
+  static Future<void> updateNote(
+      String id, String title, String description) async {
+    Map<String, dynamic> updateNote = {
+      'title': title,
+      'descriiption': description,
+    };
+    await _noteCollection.doc(id).update(updateNote);
+  }
+  static Future<void> deleteNote(String id) async {
+    await _noteCollection.doc(id).delete();
+  }
+
+  static Stream<List<Map<String, dynamic>>> getNoteList() {
+    return _noteCollection.snapshots().map((querySnapshot) {
+      return querySnapshot.docs.map((docSnapshot){
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        return {'id' : docSnapshot.id, ...data};
+      }).toList();
+    });
   }
 }
